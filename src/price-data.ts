@@ -1,69 +1,40 @@
 import "server-only"
-
 import type { Candle } from "./wavetrend"
 import { TIMEFRAMES } from "./wavetrend"
 
-/**
- * Real OHLCV price-data fetcher for SPX500 (S&P 500 cash index).
- *
- * Uses Yahoo Finance's public chart API (no API key required). The Yahoo symbol for the S&P 500 index is ^GSPC.
- */
-
 const YHOO_SYMBOL = "^GSPC"
 
-/** Yahoo interval code for a canonical timeframe id. */
 function yahooInterval(tfId: string): { interval: string; aggregate?: number } {
   switch (tfId) {
-    case "W":
-      return { interval: "1wk" }
-    case "D":
-      return { interval: "1d" }
-    case "240":
-      return { interval: "60m", aggregate: 4 }
-    case "180":
-      return { interval: "60m", aggregate: 3 }
-    case "120":
-      return { interval: "60m", aggregate: 2 }
-    case "60":
-      return { interval: "60m" }
-    case "45":
-      return { interval: "15m", aggregate: 3 }
-    case "30":
-      return { interval: "30m" }
-    case "15":
-      return { interval: "15m" }
-    case "5":
-      return { interval: "5m" }
-    case "1":
-      return { interval: "1m" }
-    default:
-      return { interval: "1d" }
+    case "W": return { interval: "1wk" }
+    case "D": return { interval: "1d" }
+    case "240": return { interval: "60m", aggregate: 4 }
+    case "180": return { interval: "60m", aggregate: 3 }
+    case "120": return { interval: "60m", aggregate: 2 }
+    case "60": return { interval: "60m" }
+    case "45": return { interval: "15m", aggregate: 3 }
+    case "30": return { interval: "30m" }
+    case "15": return { interval: "15m" }
+    case "5": return { interval: "5m" }
+    case "1": return { interval: "1m" }
+    default: return { interval: "1d" }
   }
 }
 
-/** Yahoo `range` param — enough history for warm-up + divergence lookback. */
 function yahooRange(tfId: string): string {
   switch (tfId) {
-    case "W":
-      return "5y"
-    case "D":
-      return "2y"
+    case "W": return "5y"
+    case "D": return "2y"
     case "240":
     case "180":
-    case "120":
-      return "6mo"
-    case "60":
-      return "3mo"
+    case "120": return "6mo"
+    case "60": return "3mo"
     case "45":
     case "30":
-    case "15":
-      return "1mo"
-    case "5":
-      return "5d"
-    case "1":
-      return "1d"
-    default:
-      return "1y"
+    case "15": return "1mo"
+    case "5": return "5d"
+    case "1": return "1d"
+    default: return "1y"
   }
 }
 
@@ -92,8 +63,7 @@ async function fetchYahooCandles(tfId: string): Promise<Candle[]> {
 
   const res = await fetch(url, {
     headers: {
-      "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
     },
     next: { revalidate: 60 },
   })
@@ -139,7 +109,6 @@ async function fetchYahooCandles(tfId: string): Promise<Candle[]> {
   return raw
 }
 
-/** Aggregate N finer candles into one coarser candle, in chronological order. */
 function aggregateCandles(candles: Candle[], factor: number): Candle[] {
   const out: Candle[] = []
   for (let i = 0; i < candles.length; i += factor) {
@@ -166,40 +135,6 @@ export class DataFetchError extends Error {
   }
 }
 
-export const SYMBOL = "SPX500"
-export const SYMBOL_FULL = "S&P 500 Index (SPX500)"
-
-/**
- * Fetch candles for a list of timeframes.
- */
-export async function fetchMultiTimeframe(
-  tfIds: string[],
-): Promise<{ ok: Map<string, Candle[]>; errors: Map<string, string> }> {
-  const ok = new Map<string, Candle[]>()
-  const errors = new Map<string, string>()
-  const settled = await Promise.allSettled(
-    tfIds.map((tfId) => fetchYahooCandles(tfId).then((candles) => ({ tfId, candles }))),
-  )
-  settled.forEach((r, i) => {
-    if (r.status === "fulfilled") {
-      ok.set(r.value.tfId, r.value.candles)
-    } else {
-      const tfId = tfIds[i]
-      const msg =
-        r.reason instanceof DataFetchError
-          ? r.reason.message
-          : r.reason instanceof Error
-          ? r.reason.message
-          : "خطأ غير معروف"
-      errors.set(tfId, msg)
-    }
-  })
-  return { ok, errors }
-}
-
-/**
- * Main fetchCandles wrapper expected by bot.ts
- */
 export async function fetchCandles(symbol: string, tfId: string): Promise<Candle[]> {
   return fetchYahooCandles(tfId)
 }
