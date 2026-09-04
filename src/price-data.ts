@@ -6,12 +6,7 @@ import { TIMEFRAMES } from "./wavetrend"
 /**
  * Real OHLCV price-data fetcher for SPX500 (S&P 500 cash index).
  *
- * Uses Yahoo Finance's public chart API (no API key required). This is a
- * legitimate, widely-used free data source. The Yahoo symbol for the S&P 500
- * index is ^GSPC.
- *
- * For 4-hour candles (which Yahoo does not serve natively), we fetch 1-hour
- * data and aggregate every 4 bars, anchored to session boundaries.
+ * Uses Yahoo Finance's public chart API (no API key required). The Yahoo symbol for the S&P 500 index is ^GSPC.
  */
 
 const YHOO_SYMBOL = "^GSPC"
@@ -24,7 +19,6 @@ function yahooInterval(tfId: string): { interval: string; aggregate?: number } {
     case "D":
       return { interval: "1d" }
     case "240":
-      // Yahoo has no 4h interval — fetch hourly and aggregate ×4.
       return { interval: "60m", aggregate: 4 }
     case "180":
       return { interval: "60m", aggregate: 3 }
@@ -98,11 +92,9 @@ async function fetchYahooCandles(tfId: string): Promise<Candle[]> {
 
   const res = await fetch(url, {
     headers: {
-      // Yahoo rejects requests without a browser-like User-Agent.
       "User-Agent":
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
     },
-    // Cache for 60s to avoid hammering Yahoo on repeated scans.
     next: { revalidate: 60 },
   })
 
@@ -178,8 +170,7 @@ export const SYMBOL = "SPX500"
 export const SYMBOL_FULL = "S&P 500 Index (SPX500)"
 
 /**
- * Fetch candles for a list of timeframes. Failed timeframes are returned
- * individually so partial results still render.
+ * Fetch candles for a list of timeframes.
  */
 export async function fetchMultiTimeframe(
   tfIds: string[],
@@ -198,12 +189,19 @@ export async function fetchMultiTimeframe(
         r.reason instanceof DataFetchError
           ? r.reason.message
           : r.reason instanceof Error
-            ? r.reason.message
-            : "خطأ غير معروف"
+          ? r.reason.message
+          : "خطأ غير معروف"
       errors.set(tfId, msg)
     }
   })
   return { ok, errors }
+}
+
+/**
+ * Main fetchCandles wrapper expected by bot.ts
+ */
+export async function fetchCandles(symbol: string, tfId: string): Promise<Candle[]> {
+  return fetchYahooCandles(tfId)
 }
 
 export { TIMEFRAMES }
