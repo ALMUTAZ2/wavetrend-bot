@@ -1,6 +1,7 @@
 {
-  "name": "trading-bot",
+  "name": "wavetrend-trading-bot",
   "version": "1.0.0",
+  "description": "WaveTrend Telegram Trading Bot with TypeScript and MongoDB",
   "main": "dist/bot.js",
   "scripts": {
     "build": "tsc",
