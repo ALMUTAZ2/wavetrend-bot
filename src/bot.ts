@@ -10,11 +10,10 @@ async function runEngine() {
   await connectDB()
   console.log("🚀 البوت قيد العمل ومراقبة الأسواق...")
 
-  // حلقة فحص دورية كل دقيقة
   setInterval(async () => {
     try {
       const symbol = "SPX500"
-      const tf = TIMEFRAMES["5"] // فاصل 5 دقائق
+      const tf = TIMEFRAMES["5"]
       const candles = await fetchCandles(symbol, tf.id)
 
       const wtResult = computeWaveTrend(candles, DEFAULT_WAVETREND_PARAMS)
@@ -22,7 +21,6 @@ async function runEngine() {
       const actionEvents = detectActionEvents(candles, divEvents, wtResult, DEFAULT_ACTION_PARAMS, tf)
 
       for (const event of actionEvents) {
-        // التحقق من أن الإشارة حدثت على الشمعة الأخيرة
         if (event.barIndex === candles.length - 1) {
           await sendTelegramAlert(symbol, event, tf.label)
           await saveSignal({ symbol, event, timeframe: tf.id, timestamp: new Date() })
