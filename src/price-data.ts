@@ -1,4 +1,3 @@
-import "server-only"
 import type { Candle } from "./wavetrend"
 import { TIMEFRAMES } from "./wavetrend"
 
