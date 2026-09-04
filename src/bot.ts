@@ -10,6 +10,9 @@ async function runEngine() {
   await connectDB()
   console.log("🚀 البوت قيد العمل ومراقبة الأسواق...")
 
+  // رسالة اختبار فورية للتأكد من ربط تيليجرام
+  await sendTelegramAlert("SPX500", { type: "تجربة تشغيل البوت", level: "ناجح" }, "الوضع المباشر");
+
   setInterval(async () => {
     try {
       const symbol = "SPX500"
