@@ -1,48 +1,38 @@
-import "server-only"
+import { MongoClient, Db } from "mongodb"
+import dotenv from "dotenv"
 
-import { MongoClient, type Db } from "mongodb"
+dotenv.config()
 
-const dbName = () =>
-  process.env.MONGODB_DB?.trim() || process.env.DB_NAME?.trim() || undefined
+const uri = process.env.MONGODB_URI || ""
+let client: MongoClient | null = null
+let db: Db | null = null
 
-declare global {
-  var __mongodbClientPromise: Promise<MongoClient> | undefined
-}
-
-async function createClientPromise(): Promise<MongoClient> {
-  const uri = process.env.MONGODB_URI
-
+export async function connectDB() {
+  if (db) return db
   if (!uri) {
-    throw new Error("Missing MONGODB_URI environment variable")
+    console.warn("MONGODB_URI is not defined. Database operations will be skipped.")
+    return null
   }
-
-  const client = new MongoClient(uri, {
-    appName: "etlaq-nextjs-sandbox",
-    maxPoolSize: 5,
-    minPoolSize: 0,
-    maxIdleTimeMS: 60_000,
-    serverSelectionTimeoutMS: 10_000,
-    connectTimeoutMS: 10_000,
-    waitQueueTimeoutMS: 10_000,
-  })
-
-  return client.connect()
+  try {
+    client = new MongoClient(uri)
+    await client.connect()
+    db = client.db("trading_bot_db")
+    console.log("✅ تم الاتصال بقاعدة بيانات MongoDB بنجاح")
+    return db
+  } catch (error) {
+    console.error("❌ خطأ في الاتصال بقاعدة البيانات:", error)
+    throw error
+  }
 }
 
-export function getMongoClient(): Promise<MongoClient> {
-  if (!globalThis.__mongodbClientPromise) {
-    globalThis.__mongodbClientPromise = createClientPromise().catch((error) => {
-      globalThis.__mongodbClientPromise = undefined
-      throw error
-    })
+export async function saveSignal(signalData: any) {
+  try {
+    const database = await connectDB()
+    if (!database) return
+    const collection = database.collection("signals")
+    await collection.insertOne(signalData)
+    console.log("💾 تم حفظ الإشارة في قاعدة البيانات بنجاح")
+  } catch (error) {
+    console.error("خطأ في حفظ الإشارة:", error)
   }
-
-  return globalThis.__mongodbClientPromise
-}
-
-export async function getMongoDb(): Promise<Db> {
-  const client = await getMongoClient()
-
-  const name = dbName()
-  return name ? client.db(name) : client.db()
 }
